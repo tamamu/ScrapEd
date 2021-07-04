@@ -250,7 +250,8 @@ function App() {
   }, [])
 
   const handleCtrlF = useCallback(ev => {
-    if (ev.ctrlKey && ev.code === 'KeyF') {
+    console.log(ev)
+    if (ev.ctrlKey && ev.key === 'f') {
       setShowSearchbar(true)
       if (searchBarInput.current) {
         searchBarInput.current.focus()
