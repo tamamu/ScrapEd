@@ -21,28 +21,73 @@ function useInterval(callback, delay) {
   }, [delay]);
 }
 
+function useResize(callback) {
+  const savedCallback = useRef()
+
+  useEffect(() => {
+    savedCallback.current = callback
+  }, [callback])
+
+  useEffect(() => {
+    function resize() {
+      savedCallback.current()
+    }
+    window.addEventListener('resize', resize, false)
+    return () => {
+      window.removeEventListener('resize', resize, false)
+    }
+  }, [])
+}
 
 
-const ScrapLine = styled.div`
+
+const ScrapCard = styled.div`
   text-align: left;
   display: flex;
   justify-content: center;
   font-size: 16px;
-  
-  border: 1px solid gray;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,.15);
+  border: 1px solid #fff;
   padding: 8px;
-  height: 100%;
+  transition: all .1s ease-in-out;
+  background: #fff;
+
+  &:hover {
+    box-shadow: 0 10px 20px rgba(0,0,0,.19), 0 6px 6px rgba(0,0,0,.23);
+  }
 `
   
 const ScrapContainer = styled.div`
   display: flex;
   flex-direction: column;
-  overflow-x: scroll;
   flex: 1;
+  overflow: hidden;
+  position: relative;
+  min-height: 120px;
+  max-height: ${props => props.isFocused ? props.contentHeight : 120}px;
+  transform-origin: top left;
+  transition: max-height .5s ease-in-out;
+  &.is-expand {
+    transition: max-height .5s ease-in-out;
+  }
+  &:after {
+    content: '';
+    position: absolute;
+    top: 60px;
+    width: 100%;
+    height: 60px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
+    transition: all .5s;
+  }
+  &.is-expand:after {
+    top: 100%;
+    transition: all .5s;
+  }
 `
 
 const ScrapContent = styled.div`
-  min-height: 2em;
+  margin: 0;
+  padding: 0;
 `
 
 const ScrapComment = styled.pre`
@@ -81,24 +126,50 @@ margin: auto 8px;
 
 
 const Scrap = (props) => {
-  const { showComment, editComment, comment, onChangeComment } = props
+  const { children, showComment, isFocused, comment, onChangeComment } = props
+  const [contentHeight, setContentHeight] = React.useState(200)
+  const child = React.Children.only(children)
+  const ref = React.useRef()
+  
+  useEffect(() => {
+    console.log(ref.current.clientHeight)
+    setContentHeight(ref.current.clientHeight)
+  }, [isFocused])
+
+  useResize(() => {
+    setContentHeight(ref.current.clientHeight)
+  })
+
   return (
-    <ScrapLine>
-      <ScrapContainer>
-        <ScrapContent>{props.children}</ScrapContent>
-        {showComment
-          ? (editComment ? <ScrapCommentFold><ScrapEditableComment value={comment} onChange={onChangeComment}></ScrapEditableComment></ScrapCommentFold>
+    <ScrapCard>
+      <ScrapContainer contentHeight={contentHeight} isFocused={isFocused} className={isFocused ? "is-expand" : null}>
+        <ScrapContent ref={ref}>{child}</ScrapContent>
+        {/*showComment
+          ? (isFocused ? <ScrapCommentFold><ScrapEditableComment value={comment} onChange={onChangeComment}></ScrapEditableComment></ScrapCommentFold>
                          : <ScrapComment>{comment}</ScrapComment>)
-          : null}
+          : null*/}
       </ScrapContainer >
       <ScrapClose onClick={props.onRemove}></ScrapClose>
-    </ScrapLine>
+    </ScrapCard>
   )
 }
 
 const ScrapP = styled.p`
   margin: 0;
   padding: 0;
+  word-break: break-all;
+  overflow-wrap: hyphens;
+  transition: all 1s;
+  &:first-letter {
+    font-weight: bold;
+    font-size: 40px;
+    font-size: 4rem;
+    line-height: 40px;
+    line-height: 4rem;
+    height: 4rem;
+    text-transform: uppercase;
+    transition: all 1s;
+  }
 `
 
 const ScrapPre = styled.pre`
@@ -308,7 +379,7 @@ function App() {
     isInitialized.current = true
   }, [scrapList])
 
-  const scrapToElement = ({scrap, showComment, editComment}, idx) => {
+  const scrapToElement = ({scrap, showComment, isFocused}, idx) => {
     const {dataType, data} = scrap.payload
     const comment = scrap.comment
     const onRemove = () => {
@@ -330,7 +401,7 @@ function App() {
             query={searchQuery}
             comment={comment}
             showComment={showComment}
-            editComment={editComment}
+            isFocused={isFocused}
             onChangeComment={onChangeComment}
             onRemove={onRemove}
             />
@@ -342,7 +413,7 @@ function App() {
             query={searchQuery}
             comment={comment}
             showComment={showComment}
-            editComment={editComment}
+            isFocused={isFocused}
             onChangeComment={onChangeComment}
             onRemove={onRemove}
             />
@@ -354,7 +425,7 @@ function App() {
             query={searchQuery}
             comment={comment}
             showComment={showComment}
-            editComment={editComment}
+            isFocused={isFocused}
             onChangeComment={onChangeComment}
             onRemove={onRemove}
             />
@@ -390,7 +461,7 @@ function App() {
            {scrapToElement({
              scrap,
              showComment: scrap.comment !== '' || focusedScrap === idx,
-             editComment: focusedScrap === idx,
+             isFocused: focusedScrap === idx,
              }, idx)}
          </ScrapItem>)
         )}
